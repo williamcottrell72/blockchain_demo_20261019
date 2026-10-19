@@ -1,0 +1,118 @@
+export const factoryAbi = [
+  {
+    type: "function",
+    name: "allTokens",
+    inputs: [],
+    outputs: [{name: "", type: "address[]", internalType: "address[]"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "createToken",
+    inputs: [
+      {name: "tokenName", type: "string", internalType: "string"},
+      {name: "tokenSymbol", type: "string", internalType: "string"},
+      {name: "initialSupply", type: "uint256", internalType: "uint256"},
+      {
+        name: "curveConfig",
+        type: "tuple",
+        internalType: "struct CurveToken.BondingCurveConfig",
+        components: [
+          {name: "curveType", type: "uint8", internalType: "uint8"},
+          {name: "basePrice", type: "uint256", internalType: "uint256"},
+          {name: "slope", type: "uint256", internalType: "uint256"},
+          {name: "reserveRatioBps", type: "uint256", internalType: "uint256"},
+          {name: "maxSupply", type: "uint256", internalType: "uint256"},
+        ],
+      },
+    ],
+    outputs: [{name: "token", type: "address", internalType: "address"}],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "creationFee",
+    inputs: [],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [{name: "", type: "address", internalType: "address"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "tokenAt",
+    inputs: [{name: "index", type: "uint256", internalType: "uint256"}],
+    outputs: [{name: "", type: "address", internalType: "address"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "tokenCount",
+    inputs: [],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "tokenCreator",
+    inputs: [{name: "token", type: "address", internalType: "address"}],
+    outputs: [{name: "creator", type: "address", internalType: "address"}],
+    stateMutability: "view",
+  },
+] as const;
+
+export const tokenAbi = [
+  {
+    type: "function",
+    name: "balanceOf",
+    inputs: [{name: "account", type: "address", internalType: "address"}],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "bondingCurve",
+    inputs: [],
+    outputs: [
+      {name: "curveType", type: "uint8", internalType: "uint8"},
+      {name: "basePrice", type: "uint256", internalType: "uint256"},
+      {name: "slope", type: "uint256", internalType: "uint256"},
+      {name: "reserveRatioBps", type: "uint256", internalType: "uint256"},
+      {name: "maxSupply", type: "uint256", internalType: "uint256"},
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "name",
+    inputs: [],
+    outputs: [{name: "", type: "string", internalType: "string"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [{name: "", type: "address", internalType: "address"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "symbol",
+    inputs: [],
+    outputs: [{name: "", type: "string", internalType: "string"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "totalSupply",
+    inputs: [],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "view",
+  },
+] as const;

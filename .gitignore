@@ -2,3 +2,6 @@ cache/
 out/
 broadcast/
 .env
+dist/
+node_modules/
+*.tsbuildinfo

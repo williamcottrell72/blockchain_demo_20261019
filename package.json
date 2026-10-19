@@ -1,0 +1,41 @@
+{
+  "name": "blockchain_demo_20261019",
+  "version": "1.0.0",
+  "description": "Foundry project for a payable factory that deploys user-owned ERC20 tokens with configurable supply caps and bonding-curve metadata.",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "deploy:local": "node web/scripts/deploy-local.mjs",
+    "fund:local": "node web/scripts/fund-local.mjs",
+    "build:web": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/williamcottrell72/blockchain_demo_20261019.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/williamcottrell72/blockchain_demo_20261019/issues"
+  },
+  "homepage": "https://github.com/williamcottrell72/blockchain_demo_20261019#readme",
+  "dependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "lucide-react": "^1.59.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "viem": "^2.57.7",
+    "vite": "^8.3.4"
+  }
+}
