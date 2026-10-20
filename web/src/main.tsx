@@ -233,28 +233,44 @@ function App() {
       const initialSupply = parseUnits(form.initialSupply || "0", 18);
       const maxSupply = form.maxSupply ? parseUnits(form.maxSupply, 18) : 0n;
       const reserveRatioBps = BigInt(form.reserveRatioBps || "0");
+      const curveConfig = {
+        curveType: Number(form.curveType),
+        basePrice: BigInt(form.basePriceWei || "0"),
+        slope: BigInt(form.slopeWei || "0"),
+        reserveRatioBps,
+        maxSupply,
+      };
+      const createArgs = [form.name, form.symbol.toUpperCase(), initialSupply, curveConfig] as const;
+
+      if (maxSupply !== 0n && initialSupply > maxSupply) {
+        setStatus("Max supply must be at least initial supply");
+        return;
+      }
+
+      await publicClient.simulateContract({
+        account,
+        address: normalizedFactory,
+        abi: factoryAbi,
+        functionName: "createToken",
+        args: createArgs,
+        value: factoryState.creationFee,
+      });
 
       const hash = await walletClient.writeContract({
         address: normalizedFactory,
         abi: factoryAbi,
         functionName: "createToken",
-        args: [
-          form.name,
-          form.symbol.toUpperCase(),
-          initialSupply,
-          {
-            curveType: Number(form.curveType),
-            basePrice: BigInt(form.basePriceWei || "0"),
-            slope: BigInt(form.slopeWei || "0"),
-            reserveRatioBps,
-            maxSupply,
-          },
-        ],
+        args: createArgs,
         value: factoryState.creationFee,
       });
 
       setStatus(`Pending ${shortAddress(hash)}`);
-      await publicClient.waitForTransactionReceipt({hash});
+      const receipt = await publicClient.waitForTransactionReceipt({hash});
+      if (receipt.status !== "success") {
+        setStatus(`Transaction reverted: ${shortAddress(hash)}`);
+        return;
+      }
+
       setStatus("Token created");
       await loadFactory();
     } catch (error) {

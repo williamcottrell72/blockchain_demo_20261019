@@ -322,6 +322,66 @@ When teaching this project, a useful progression is:
 9. Use the frontend to create several tokens with different configs.
 10. Compare the token cards and curve parameters.
 
+## General Smart Contract Principles
+
+These principles should guide future changes. Some are already present in this demo; others become more important as the system grows toward production.
+
+### Checks-Effects-Interactions
+
+Use the checks-effects-interactions pattern whenever a function changes state and calls outside the contract.
+
+Order function logic as:
+
+1. Checks: validate inputs, permissions, balances, caps, and other preconditions.
+2. Effects: update internal contract state.
+3. Interactions: call external contracts or send ETH last.
+
+This ordering reduces reentrancy risk because the contract's own state is already settled before control leaves the contract.
+
+In this project, `withdrawFees` follows the spirit of this pattern by checking authorization before sending ETH. If fee accounting becomes more granular later, update internal accounting before making the external call.
+
+### Pull Payments Over Push Payments
+
+Prefer pull-based payment flows when many users may receive funds.
+
+Instead of automatically sending ETH or tokens to recipients during an unrelated state change, record what they are owed and let them call a separate withdrawal function. This avoids denial-of-service failures where one recipient contract rejects payment and causes the whole operation to revert.
+
+The current factory has a simple admin withdrawal flow, not per-user payment distribution. A future bonding-curve market with refunds, creator revenue, or sell proceeds should use pull payments for user balances.
+
+### Role-Based Access Control
+
+Single-owner administration is simple and useful for teaching, but production contracts often need more granular permissions.
+
+Role-based access control separates capabilities such as:
+
+- `DEFAULT_ADMIN_ROLE`: manages roles.
+- `MINTER_ROLE`: mints tokens.
+- `PAUSER_ROLE`: pauses emergency-sensitive flows.
+- `WITHDRAWER_ROLE`: withdraws fees or protocol revenue.
+
+This project currently uses a simple `owner` plus `feeWithdrawer` mapping. A production version could replace that with OpenZeppelin `AccessControl` if permissions become more complex.
+
+### Factory Pattern
+
+Use a factory when one contract should create and track many related child contracts.
+
+The factory gives the system:
+
+- A single public entry point.
+- A registry of deployed child contracts.
+- Shared fee and admin policy.
+- Consistent deployment parameters.
+
+This project uses the factory pattern directly: `CurveTokenFactory` deploys many `CurveToken` child contracts and records each token address and creator.
+
+### Transient Storage
+
+Transient storage, introduced by EIP-1153, provides temporary transaction-scoped storage through `TSTORE` and `TLOAD`.
+
+It can reduce gas for patterns such as reentrancy guards because data written to transient storage is cleared automatically at the end of the transaction and does not pay the same cost profile as permanent storage.
+
+Use transient storage only when the target chain supports it and the team is comfortable with the newer execution semantics. The current demo does not need it, but a production bonding-curve market with frequent external calls could consider transient-storage reentrancy guards where supported.
+
 ## Future Design Options
 
 ### Full Bonding Curve Market
