@@ -31,9 +31,39 @@ export const factoryAbi = [
   },
   {
     type: "function",
+    name: "createUpgradeableToken",
+    inputs: [
+      {name: "tokenName", type: "string", internalType: "string"},
+      {name: "tokenSymbol", type: "string", internalType: "string"},
+      {name: "initialSupply", type: "uint256", internalType: "uint256"},
+      {
+        name: "curveConfig",
+        type: "tuple",
+        internalType: "struct CurveToken.BondingCurveConfig",
+        components: [
+          {name: "curveType", type: "uint8", internalType: "uint8"},
+          {name: "basePrice", type: "uint256", internalType: "uint256"},
+          {name: "slope", type: "uint256", internalType: "uint256"},
+          {name: "reserveRatioBps", type: "uint256", internalType: "uint256"},
+          {name: "maxSupply", type: "uint256", internalType: "uint256"},
+        ],
+      },
+    ],
+    outputs: [{name: "token", type: "address", internalType: "address"}],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
     name: "creationFee",
     inputs: [],
     outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "isUpgradeable",
+    inputs: [{name: "token", type: "address", internalType: "address"}],
+    outputs: [{name: "upgradeable", type: "bool", internalType: "bool"}],
     stateMutability: "view",
   },
   {
@@ -64,6 +94,35 @@ export const factoryAbi = [
     outputs: [{name: "creator", type: "address", internalType: "address"}],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "upgradeabilityFee",
+    inputs: [],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "upgradeableImplementation",
+    inputs: [],
+    outputs: [{name: "", type: "address", internalType: "address"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "withdrawFees",
+    inputs: [{name: "to", type: "address", internalType: "address payable"}],
+    outputs: [{name: "amount", type: "uint256", internalType: "uint256"}],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "error",
+    name: "FeeTooLow",
+    inputs: [
+      {name: "required", type: "uint256", internalType: "uint256"},
+      {name: "received", type: "uint256", internalType: "uint256"},
+    ],
+  },
 ] as const;
 
 export const tokenAbi = [
@@ -89,6 +148,13 @@ export const tokenAbi = [
   },
   {
     type: "function",
+    name: "mintFromCurve",
+    inputs: [{name: "amount", type: "uint256", internalType: "uint256"}],
+    outputs: [{name: "cost", type: "uint256", internalType: "uint256"}],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
     name: "name",
     inputs: [],
     outputs: [{name: "", type: "string", internalType: "string"}],
@@ -99,6 +165,13 @@ export const tokenAbi = [
     name: "owner",
     inputs: [],
     outputs: [{name: "", type: "address", internalType: "address"}],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "quoteMintCost",
+    inputs: [{name: "amount", type: "uint256", internalType: "uint256"}],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
     stateMutability: "view",
   },
   {
@@ -114,5 +187,43 @@ export const tokenAbi = [
     inputs: [],
     outputs: [{name: "", type: "uint256", internalType: "uint256"}],
     stateMutability: "view",
+  },
+] as const;
+
+// Extra functions exposed only by `CurveTokenUpgradeable` proxies.
+export const upgradeableTokenAbi = [
+  {
+    type: "function",
+    name: "updateBondingCurve",
+    inputs: [
+      {
+        name: "newConfig",
+        type: "tuple",
+        internalType: "struct CurveToken.BondingCurveConfig",
+        components: [
+          {name: "curveType", type: "uint8", internalType: "uint8"},
+          {name: "basePrice", type: "uint256", internalType: "uint256"},
+          {name: "slope", type: "uint256", internalType: "uint256"},
+          {name: "reserveRatioBps", type: "uint256", internalType: "uint256"},
+          {name: "maxSupply", type: "uint256", internalType: "uint256"},
+        ],
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "version",
+    inputs: [],
+    outputs: [{name: "", type: "uint256", internalType: "uint256"}],
+    stateMutability: "pure",
+  },
+  {type: "error", name: "CapExceeded", inputs: []},
+  {type: "error", name: "InvalidConfig", inputs: []},
+  {
+    type: "error",
+    name: "OwnableUnauthorizedAccount",
+    inputs: [{name: "account", type: "address", internalType: "address"}],
   },
 ] as const;

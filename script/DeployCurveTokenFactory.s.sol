@@ -8,9 +8,10 @@ contract DeployCurveTokenFactory is Script {
     function run() external returns (CurveTokenFactory factory) {
         uint256 creationFee = vm.envOr("CREATION_FEE", uint256(0.01 ether));
         address initialOwner = vm.envOr("INITIAL_OWNER", msg.sender);
+        uint256 upgradeabilityFee = vm.envOr("UPGRADEABILITY_FEE", uint256(0.005 ether));
 
         vm.startBroadcast();
-        factory = new CurveTokenFactory(creationFee, initialOwner);
+        factory = new CurveTokenFactory(creationFee, initialOwner, upgradeabilityFee);
         vm.stopBroadcast();
     }
 }

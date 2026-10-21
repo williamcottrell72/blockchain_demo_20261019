@@ -23,7 +23,8 @@ The factory owner is the account that controls factory administration.
 
 The owner can:
 
-- Change `creationFee`.
+- Change `creationFee` and `upgradeabilityFee`.
+- Change the implementation used by future upgradeable tokens (not existing ones).
 - Add or remove authorized fee withdrawers.
 - Transfer factory ownership.
 - Withdraw factory fees.
@@ -63,6 +64,7 @@ The token owner can:
 
 - Mint more tokens, subject to `maxSupply`.
 - Transfer token ownership.
+- For upgradeable tokens only: change the curve parameters and upgrade the token's logic.
 
 Any token holder can:
 
@@ -87,6 +89,7 @@ Important state:
 Important functions:
 
 - `createToken(...)`: deploys a `CurveToken`, records it, and emits `TokenCreated`.
+- `createUpgradeableToken(...)`: charges `creationFee + upgradeabilityFee`, deploys an `ERC1967Proxy` pointing at `upgradeableImplementation`, initializes it, records it, and emits `TokenCreated` plus `UpgradeableTokenCreated`.
 - `allTokens()`: returns all token addresses.
 - `tokenCount()`: returns the number of deployed tokens.
 - `tokenAt(index)`: returns a token address by index.
@@ -94,7 +97,7 @@ Important functions:
 - `setFeeWithdrawer(account, allowed)`: owner-only withdrawal authorization.
 - `withdrawFees(to)`: owner-or-withdrawer fee withdrawal.
 
-The factory uses direct deployment with `new CurveToken(...)`. It does not currently use clones, proxies, or create2.
+Fixed tokens use direct deployment with `new CurveToken(...)`. Upgradeable tokens use UUPS proxies (see below). The factory does not use clones or create2.
 
 ### `CurveToken`
 
@@ -113,10 +116,41 @@ Important state:
 Important functions:
 
 - `mint(to, amount)`: owner-only minting with cap checks.
+- `mintFromCurve(amount)`: public payable minting at the current quoted curve cost.
+- `withdrawProceeds(to)`: owner-only withdrawal of ETH collected by curve mints.
 - `burn(amount)`: holder burns their own tokens.
 - `quoteMintCost(amount)`: returns a deterministic quote based on the stored curve config.
 
 The token uses OpenZeppelin's standard ERC20 behavior for transfers, approvals, allowances, balances, and total supply.
+
+### `CurveTokenUpgradeable` and the UUPS Proxy Pattern
+
+A normal contract's code is fixed when it is deployed. A proxy splits one contract into two:
+
+```text
+user ──call──▶ ERC1967Proxy (storage, ETH, address) ──delegatecall──▶ CurveTokenUpgradeable (code only)
+```
+
+- The **proxy** is the token address users see. It holds balances, the curve config, the owner, and ETH. Its only job is to forward every call with `delegatecall`, which runs the implementation's code against the proxy's own storage.
+- The **implementation** holds only code. One implementation is shared by every upgradeable token the factory creates.
+- The implementation address is stored in a fixed slot defined by ERC-1967 (`keccak256("eip1967.proxy.implementation") - 1`), chosen so it cannot collide with normal state variables. The frontend reads this slot directly with `eth_getStorageAt` to show which logic each token runs.
+
+**UUPS** (Universal Upgradeable Proxy Standard, ERC-1822) puts the upgrade function, `upgradeToAndCall`, in the *implementation* instead of the proxy. That keeps the proxy tiny (~160 bytes of runtime code), and the implementation decides who may upgrade through `_authorizeUpgrade`. In this project only the token owner may upgrade. The factory owner cannot upgrade a user's token.
+
+Proxy-specific rules the contract follows:
+
+- **No constructor setup.** The proxy never runs the implementation's constructor, so setup lives in `initialize`, which the factory calls atomically when it deploys the proxy. The `initializer` modifier makes it callable only once.
+- **Lock the implementation.** The implementation's constructor calls `_disableInitializers()`, so nobody can initialize the bare implementation contract and claim it.
+- **No `immutable` per-token values.** Immutables live in code, not storage, so the factory address is a normal state variable (`factory`) here instead of `FACTORY`.
+- **Append-only storage.** A future version must keep the existing state variable order and only add new variables after them. Reordering would make the new code read old data from the wrong slots. OpenZeppelin's upgradeable parents use namespaced (ERC-7201) storage, so their state does not collide with ours.
+- **Forget the upgrade function and the token is frozen for good.** If a new implementation left out `UUPSUpgradeable`, the proxy could never be upgraded again.
+
+Upgradeable tokens add two owner-only capabilities:
+
+- `updateBondingCurve(config)`: change the curve type, prices, reserve ratio, and cap. The cap cannot drop below current supply. This is what the frontend's **Modify** button calls.
+- `upgradeToAndCall(newImplementation, data)`: replace the logic entirely while keeping balances and settings. `test/CurveTokenUpgradeable.t.sol` shows this with a `CurveTokenUpgradeableV2` that reports `version() == 2` and keeps all state.
+
+Trade-off to teach: upgradeability is power held by the owner. Holders of an upgradeable token are trusting the owner not to change prices or logic against them. That is why the fixed `CurveToken` stays the default, and why upgradeability costs an extra fee here. Production systems usually put upgrade rights behind a multisig and/or timelock.
 
 ## Bonding Curve Config
 
@@ -209,30 +243,31 @@ quoteMintCost(amount) = (startingPrice + endingPrice) * amount / 2
 
 This is the sum of an arithmetic progression. It approximates the total price for minting `amount` sequential units where each next unit becomes more expensive.
 
-## Important Limitation: Quote Surface, Not Market Maker
+## Important Limitation: Minting Curve, Not Full Market Maker
 
-The current bonding curve is not a full automated market maker.
+The current bonding curve supports paid public minting, but it is not a full automated market maker.
+
+It does:
+
+- Store curve config.
+- Expose `quoteMintCost(amount)`.
+- Let buyers call `mintFromCurve(amount)` and pay exactly the quoted ETH cost.
+- Hold those ETH proceeds in the token contract.
+- Let the token owner withdraw proceeds.
 
 It does not:
 
-- Accept payment to buy tokens directly from the token contract.
-- Hold reserve assets.
 - Let users sell tokens back into a reserve.
-- Enforce the quoted price during minting.
-- Route creator minting through the curve.
-
-Instead, it:
-
-- Stores curve config.
-- Exposes `quoteMintCost(amount)`.
-- Lets frontends and future contracts read a consistent quote.
+- Use `reserveRatioBps` for reserve accounting yet.
+- Provide slippage controls.
+- Route owner minting through the curve.
 
 This is useful for teaching because it separates two ideas:
 
 1. Token factory and ownership mechanics.
-2. Bonding-curve pricing mechanics.
+2. Bonding-curve pricing and paid minting mechanics.
 
-A future version can add real economic settlement after the basic architecture is understood.
+A future version can add sell-side settlement and real reserve accounting after the basic architecture is understood.
 
 ## Fee Flow
 
@@ -263,7 +298,9 @@ The UI has:
 - Factory address input.
 - RPC URL input.
 - Wallet connect button.
-- Factory metrics: owner, fee, balance, token count.
+- Factory metrics: owner, owner balance, fee, upgrade fee, balance, token count.
+- An "Upgradeable (UUPS proxy)" checkbox on the create form.
+- A Modify button per token card, enabled only for upgradeable tokens owned by the connected wallet.
 - Token creation form.
 - Minted token cards.
 - Status footer.
@@ -318,9 +355,13 @@ When teaching this project, a useful progression is:
 5. Show the token registry: the factory records what it created.
 6. Show the bonding-curve config: token economics as data.
 7. Show `quoteMintCost`: deterministic pricing from state.
-8. Explain why this is not yet a market maker.
-9. Use the frontend to create several tokens with different configs.
-10. Compare the token cards and curve parameters.
+8. Show `mintFromCurve`: a different wallet pays the quote and receives new tokens.
+9. Explain why this is still not a full buy/sell market maker.
+10. Use the frontend to create several tokens with different configs.
+11. Compare the token cards and curve parameters.
+12. Create an upgradeable token and compare its "Contract" and "Logic" fields to a fixed one.
+13. Use **Modify** on the upgradeable token to change its price, then re-quote a mint. Note that the token address did not change.
+14. Walk through `testOwnerCanUpgradeAndStateIsPreserved` to show that logic can be swapped out while the data stays in place.
 
 ## General Smart Contract Principles
 
@@ -435,7 +476,6 @@ The current version does not aim to provide:
 - A token launchpad with anti-bot controls.
 - Liquidity pools.
 - Governance.
-- Upgradeability.
 - Cross-chain deployment.
 - Explorer integration for the local network.
 

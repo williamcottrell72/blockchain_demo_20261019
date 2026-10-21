@@ -19,7 +19,13 @@ contract CurveToken is ERC20, Ownable {
 
     error AmountZero();
     error CapExceeded();
+    error IncorrectPayment(uint256 required, uint256 received);
     error InvalidConfig();
+    error WithdrawalFailed();
+    error ZeroAddress();
+
+    event CurveMint(address indexed buyer, uint256 amount, uint256 cost);
+    event ProceedsWithdrawn(address indexed to, uint256 amount);
 
     constructor(
         string memory tokenName,
@@ -51,10 +57,32 @@ contract CurveToken is ERC20, Ownable {
         _burn(msg.sender, amount);
     }
 
+    function mintFromCurve(uint256 amount) external payable returns (uint256 cost) {
+        cost = _quoteMintCost(amount);
+        if (msg.value != cost) revert IncorrectPayment(cost, msg.value);
+
+        _mintWithCap(msg.sender, amount);
+        emit CurveMint(msg.sender, amount, cost);
+    }
+
+    function withdrawProceeds(address payable to) external onlyOwner returns (uint256 amount) {
+        if (to == address(0)) revert ZeroAddress();
+
+        amount = address(this).balance;
+        (bool success,) = to.call{value: amount}("");
+        if (!success) revert WithdrawalFailed();
+
+        emit ProceedsWithdrawn(to, amount);
+    }
+
     /// @notice Quotes a linear curve cost for minting `amount` from the current supply.
     /// @dev This helper does not collect reserve assets. It gives callers a deterministic
     ///      price surface to use in surrounding sale logic or frontends.
     function quoteMintCost(uint256 amount) external view returns (uint256) {
+        return _quoteMintCost(amount);
+    }
+
+    function _quoteMintCost(uint256 amount) internal view returns (uint256) {
         if (amount == 0) return 0;
 
         BondingCurveConfig memory curve = bondingCurve;

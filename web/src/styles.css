@@ -30,6 +30,7 @@ select {
 .topbar,
 .control-band,
 .summary-grid,
+.admin-band,
 .workbench,
 .status-bar {
   margin: 0 auto;
@@ -154,8 +155,37 @@ select:focus {
 .summary-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: 16px;
+}
+
+.admin-band {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dbe2dc;
+  border-radius: 8px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 14px 16px;
+}
+
+.admin-band div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-band span {
+  color: #65736b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-band strong {
+  overflow-wrap: anywhere;
 }
 
 .metric,
@@ -210,6 +240,53 @@ select:focus {
 .submit {
   margin-top: 16px;
   width: 100%;
+}
+
+.toggle-row {
+  align-items: center;
+  background: #f8faf7;
+  border: 1px solid #e1e7e2;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.toggle-row input {
+  accent-color: #143d33;
+  flex: none;
+  height: 18px;
+  min-height: 0;
+  width: 18px;
+}
+
+.toggle-row div {
+  display: grid;
+  gap: 3px;
+}
+
+.toggle-row small {
+  color: #65736b;
+  font-size: 12px;
+}
+
+.modify-section {
+  border-top: 1px solid #e3e9e4;
+  display: grid;
+  padding-top: 12px;
+}
+
+.modify-form {
+  display: grid;
+  gap: 12px;
+}
+
+.modify-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .token-list {
@@ -268,6 +345,38 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.curve-mint {
+  border-top: 1px solid #e3e9e4;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 12px;
+}
+
+.quote-line {
+  align-items: center;
+  background: #f8faf7;
+  border: 1px solid #e1e7e2;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.quote-line span {
+  color: #65736b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quote-line strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .empty-state {
   align-items: center;
   background: #f8faf7;
@@ -310,6 +419,7 @@ dd {
 
   .topbar,
   .control-band,
+  .admin-band,
   .workbench {
     grid-template-columns: 1fr;
   }
@@ -319,9 +429,17 @@ dd {
     display: grid;
   }
 
-  .summary-grid,
+  .admin-band {
+    align-items: stretch;
+    display: grid;
+  }
+
   .token-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

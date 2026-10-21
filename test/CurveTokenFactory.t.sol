@@ -10,12 +10,14 @@ contract CurveTokenFactoryTest is Test {
 
     address private owner = address(0xA11CE);
     address private creator = address(0xB0B);
+    address private buyer = address(0xBEEF);
     address private withdrawer = address(0xCAFE);
     uint256 private fee = 0.01 ether;
 
     function setUp() public {
-        factory = new CurveTokenFactory(fee, owner);
+        factory = new CurveTokenFactory(fee, owner, 0.005 ether);
         vm.deal(creator, 10 ether);
+        vm.deal(buyer, 10 ether);
     }
 
     function testCreateTokenCollectsFeeAndAssignsOwnership() public {
@@ -109,5 +111,56 @@ contract CurveTokenFactoryTest is Test {
         CurveToken token = CurveToken(factory.createToken{value: fee}("Demo Token", "DEMO", 5, config));
 
         assertEq(token.quoteMintCost(3), 66);
+    }
+
+    function testBuyerCanMintFromCurveWithExactPayment() public {
+        CurveToken.BondingCurveConfig memory config = CurveToken.BondingCurveConfig({
+            curveType: 1, basePrice: 10, slope: 2, reserveRatioBps: 1_000, maxSupply: 0
+        });
+
+        vm.prank(creator);
+        CurveToken token = CurveToken(factory.createToken{value: fee}("Demo Token", "DEMO", 0, config));
+
+        uint256 cost = token.quoteMintCost(3);
+
+        vm.prank(buyer);
+        uint256 paid = token.mintFromCurve{value: cost}(3);
+
+        assertEq(paid, 36);
+        assertEq(token.balanceOf(buyer), 3);
+        assertEq(token.totalSupply(), 3);
+        assertEq(address(token).balance, 36);
+    }
+
+    function testBuyerMintFromCurveRevertsWithIncorrectPayment() public {
+        CurveToken.BondingCurveConfig memory config =
+            CurveToken.BondingCurveConfig({curveType: 0, basePrice: 10, slope: 0, reserveRatioBps: 0, maxSupply: 0});
+
+        vm.prank(creator);
+        CurveToken token = CurveToken(factory.createToken{value: fee}("Demo Token", "DEMO", 0, config));
+
+        vm.prank(buyer);
+        vm.expectRevert(abi.encodeWithSelector(CurveToken.IncorrectPayment.selector, 30, 29));
+        token.mintFromCurve{value: 29}(3);
+    }
+
+    function testTokenOwnerCanWithdrawCurveProceeds() public {
+        CurveToken.BondingCurveConfig memory config =
+            CurveToken.BondingCurveConfig({curveType: 0, basePrice: 10, slope: 0, reserveRatioBps: 0, maxSupply: 0});
+
+        vm.prank(creator);
+        CurveToken token = CurveToken(factory.createToken{value: fee}("Demo Token", "DEMO", 0, config));
+
+        vm.prank(buyer);
+        token.mintFromCurve{value: 30}(3);
+
+        uint256 creatorBefore = creator.balance;
+
+        vm.prank(creator);
+        uint256 withdrawn = token.withdrawProceeds(payable(creator));
+
+        assertEq(withdrawn, 30);
+        assertEq(creator.balance, creatorBefore + 30);
+        assertEq(address(token).balance, 0);
     }
 }
